@@ -1,0 +1,15 @@
+**/credentials.h
+/x64
+**/.vs
+/*/x64/
+/*/*.dll
+/*/*.xpm
+/*/Resource/
+/*/external/
+/*/Debug/
+/*/external/
+data/
+data2/
+bin/
+*.dat
+build
