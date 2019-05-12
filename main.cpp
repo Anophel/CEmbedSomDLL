@@ -1,15 +1,14 @@
 
 #include <iostream>
-#include <filesystem>
 #include <string>
 
 #include "CEmbedSom.h"
 
 int main()
 {
-  const std::filesystem::path path{ R"ddd(c:\Users\devwe\source\repos\CEmbedSomCP\data\images-ordered-pca.bin)ddd" };
+  const std::string path{ R"ddd(c:\Users\devwe\source\repos\CEmbedSomCP\data\images-ordered-pca.bin)ddd" };
 
-  CEmbedSom ces{ path.string() };
+  CEmbedSom ces{ path };
 
   std::vector<size_t> input;
 
