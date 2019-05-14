@@ -1,6 +1,6 @@
 
 # Set include directories
-set(SYENGINE_INCLUDE_DIRS
+set(C_EMBED_SOM_INCLUDE_DIRS
   ../include
   .
 )
@@ -13,25 +13,27 @@ file(
 
 # Get all header and cpp files
 file(
-  GLOB_RECURSE SYENGINE_SOURCE_FILEPATHS
+  GLOB_RECURSE C_EMBED_SOM_SRC_FILEPATHS
     "*.h"
     "*.cpp"
 )
 
 # Stup include dirs
-include_directories(${SYENGINE_INCLUDE_DIRS})
+include_directories(${C_EMBED_SOM_INCLUDE_DIRS})
 
 #############################
-# Create engine executable
+# Create main executable
 #############################
 add_executable(
   ${MAIN_EXE_NAME} 
-  ${SYENGINE_SOURCE_MAIN} ${SYENGINE_SOURCE_FILEPATHS}
+  ${SYENGINE_SOURCE_MAIN} ${C_EMBED_SOM_SRC_FILEPATHS}
 )
 INSTALL_TARGETS(T ${MAIN_EXE_NAME})
 
 if(WIN32)
   add_compile_definitions(NOMINMAX)
+  include_directories(${CMAKE_SOURCE_DIR}/external/win64/igraph-0.7.1/include)
+  target_link_libraries(${MAIN_EXE_NAME}  ${CMAKE_SOURCE_DIR}/external/win64/igraph-0.7.1/lib/igraph.lib)
 else()
   
 endif(WIN32)
