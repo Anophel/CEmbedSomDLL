@@ -1,6 +1,141 @@
 
 #include "CEmbedSom.h"
 
+#include <igraph.h>
+#include "kamada-kawaii.hpp"
+
+static
+void layouts_init ()
+{
+    static bool was_init=false;
+    if(was_init) return;
+
+    //this cannot be called twice otherwise igraph headxplodes
+    igraph_i_set_attribute_table (&igraph_cattribute_table);
+    was_init=true;
+}
+
+static
+void emcoords_som (const size_t ed,
+                   const size_t k,
+                   const size_t d,
+                   const std::vector<float>& somcoords,
+                   const std::vector<float>& koho,
+                   std::vector<float>& emcoords)
+{
+
+    std::vector<float> weights;
+    std::vector<int> edges;
+    for (size_t i = 0; i < k; ++i)
+        for (size_t j = i; j < k; ++j) {
+            float dist = sqreucl (somcoords.data () + ed * i,
+                                  somcoords.data () + ed * j,
+                                  ed);
+            if (dist > 1.1) continue; // TODO try to increase this
+            edges.push_back (i);
+            edges.push_back (j);
+            weights.push_back (sqrtf (sqreucl (
+              koho.data () + d * i, koho.data () + d * j, d)));
+        }
+
+    igraph_t g;
+    igraph_vector_t ws, es;
+    igraph_vector_init (&es, edges.size ());
+    igraph_vector_init (&ws, weights.size ());
+    for (size_t i = 0; i < edges.size (); ++i) VECTOR (es)[i] = edges[i];
+    for (size_t i = 0; i < weights.size (); ++i)
+        VECTOR (ws)[i] = weights[i];
+    weights.clear();
+    edges.clear();
+    igraph_create (&g, &es, k, false);
+    igraph_vector_destroy (&es);
+
+    igraph_matrix_t res;
+    igraph_matrix_init (&res, k, ed);
+    for (size_t i = 0; i < k; ++i)
+        for (size_t j = 0; j < ed; ++j)
+            MATRIX (res, i, j) = somcoords[ed * i + j];
+
+    timed (
+      "kamada-kawaii",
+      bundle_igraph_layout_kamada_kawai (
+        &g, &res, 50 * k, 0, k, &ws, nullptr, nullptr, nullptr, nullptr));
+    igraph_vector_destroy (&ws);
+
+    emcoords.resize (somcoords.size ());
+    for (size_t i = 0; i < k; ++i)
+        for (size_t j = 0; j < ed; ++j) {
+            emcoords[ed * i + j] = MATRIX (res, i, j);
+        }
+    igraph_matrix_destroy (&res);
+    igraph_destroy (&g);
+}
+
+static
+void emcoords_mst (const size_t ed,
+                   const size_t k,
+                   const size_t d,
+                   const std::vector<float>& somcoords,
+                   const std::vector<float>& koho,
+                   std::vector<float>& emcoords)
+{
+    igraph_matrix_t adj;
+    igraph_matrix_init (&adj, k, k);
+    for (size_t i = 0; i < k; ++i)
+        for (size_t j = i; j < k; ++j) {
+            float tmp = sqrtf (sqreucl (
+              koho.data () + d * i, koho.data () + d * j, d));
+            MATRIX (adj, i, j) = tmp;
+            MATRIX (adj, j, i) = tmp;
+        }
+    igraph_t g;
+    igraph_weighted_adjacency (
+      &g, &adj, IGRAPH_ADJ_UNDIRECTED, "weight", true);
+    igraph_vector_t ws;
+    igraph_vector_init (&ws, igraph_ecount (&g));
+    for (size_t i = 0; i < igraph_vector_size (&ws); ++i) {
+        igraph_integer_t from, to;
+        igraph_edge (&g, i, &from, &to);
+        VECTOR (ws)[i] = MATRIX (adj, from, to);
+    }
+    igraph_vector_t mste;
+    igraph_vector_init (&mste, k - 1);
+    igraph_minimum_spanning_tree (&g, &mste, &ws);
+    igraph_vector_destroy (&ws);
+    igraph_es_t es;
+    igraph_es_vector (&es, &mste);
+    igraph_t mst;
+    igraph_subgraph_edges (&g, &mst, es, true);
+    igraph_es_destroy (&es);
+    igraph_vector_destroy (&mste);
+    igraph_destroy (&g);
+
+    igraph_matrix_t res;
+    igraph_matrix_init (&res, k, ed);
+    for (size_t i = 0; i < k; ++i)
+        for (size_t j = 0; j < ed; ++j)
+            MATRIX (res, i, j) = somcoords[ed * i + j];
+    igraph_vector_init (&ws, igraph_ecount (&mst));
+    for (size_t i = 0; i < igraph_ecount (&mst); ++i) {
+        igraph_integer_t from, to;
+        igraph_edge (&mst, i, &from, &to);
+        VECTOR (ws)[i] = MATRIX (adj, from, to);
+    }
+    igraph_matrix_destroy (&adj);
+    timed (
+      "kamada-kawaii",
+      bundle_igraph_layout_kamada_kawai (
+        &mst, &res, 50 * k, 0, k, &ws, nullptr, nullptr, nullptr, nullptr));
+    igraph_vector_destroy (&ws);
+    emcoords.resize (somcoords.size ());
+    for (size_t i = 0; i < k; ++i)
+        for (size_t j = 0; j < ed; ++j) {
+            emcoords[ed * i + j] = MATRIX (res, i, j);
+        }
+    igraph_matrix_destroy (&res);
+    igraph_destroy (&mst);
+}
+
 CEmbedSom::CEmbedSom(const std::string& dataFilepath) :
     _dataFilepath(dataFilepath)
   {}
@@ -109,6 +244,19 @@ CEmbedSom::CEmbedSom(const std::string& dataFilepath) :
 
     //TODO better emcoords
 
+    log("layouting...");
+
+    std::vector<float> emcoords;
+    emcoords=somcoords;
+
+#if DO_LAYOUT_SOM
+    timed ("layouting",
+           emcoords_som (2, kohos, dims, somcoords, koho, emcoords));
+#else //do MST
+    timed ("layouting",
+           emcoords_mst (2, kohos, dims, somcoords, koho, emcoords));
+#endif
+
     log("embedding...");
     std::vector<float> embed;
     embed.resize(2 * n);
@@ -122,7 +270,7 @@ CEmbedSom::CEmbedSom(const std::string& dataFilepath) :
         kohos,
         points,
         koho,
-        somcoords,
+        emcoords,
         embed));
 
 
