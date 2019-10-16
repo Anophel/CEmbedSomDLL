@@ -80,6 +80,19 @@ inline static constexpr float sqrf(float n)
 }
 
 // euclidean distance
+inline static float sqrcos(const float* p1, const float* p2, size_t dim)
+{
+	float h = 0, da = 0, db=0;
+	const float *p1e = p1 + dim;
+	for (; p1 < p1e; ++p1, ++p2) {
+		h += *p1 * *p2;
+		da += *p1 * *p1;
+		db += *p2 * *p2;
+	}
+	// icc behaves terribly here
+	return 1-(h<0.0000001?0:h/sqrt(da*db));
+}
+// euclidean distance
 inline static float sqreucl(const float* p1, const float* p2, size_t dim)
 {
 #ifndef USE_INTRINS
@@ -146,6 +159,11 @@ inline static void heap_down(dist_id* heap, size_t start, size_t lim)
 }
 
 
+struct Position_Mapping {
+	Coords2D coords;
+	size_t clust_id;
+	//float dist_cent;
+};
 
 class CEmbedSom
 {
@@ -154,10 +172,12 @@ public:
 
 public:
   CEmbedSom() = delete;
-  CEmbedSom(const std::string& dataFilepath);
+  CEmbedSom(const std::string& dataFilepath, size_t dSize);
 
 
-  std::vector<std::pair<Coords2D, size_t>> GetImageEmbeddings(const std::vector<size_t>& imageIds);
+  std::vector<Position_Mapping> GetImageEmbeddings(const std::vector<size_t>& imageIds, const std::vector<float>& distribution);
+
+  std::vector<std::pair<Position_Mapping, size_t>> GetCollectionRepresentants(const std::vector<size_t>& imageIds, const std::vector<float>& distribution, size_t xdim = 16, size_t ydim = 16, size_t rlen = 15);
 
 private:
   void embedsom(
@@ -185,14 +205,15 @@ private:
     float radiiA[2],
     float alphasB[2],
     float radiiB[2],
-    RNG& rng);
+    RNG& rng,
+	std::vector<float> probabs);
   /* this serves for classification into small clusters */
   void mapPointsToKohos(size_t n,
     size_t k,
     size_t dim,
     const std::vector<float>& points,
     const std::vector<float>& koho,
-    std::vector<size_t>& mapping);
+	std::vector<std::pair<size_t, float>>& mapping);
 
   void print_help();
 
@@ -201,4 +222,5 @@ private:
 
 private:
   std::string _dataFilepath;
+	size_t datasetSize;
 };
