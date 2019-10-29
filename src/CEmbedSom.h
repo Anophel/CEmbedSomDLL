@@ -79,6 +79,17 @@ inline static constexpr float sqrf(float n)
   return n * n;
 }
 
+//manhattan distance
+inline static float
+manh(const float *p1, const float *p2, const size_t dim)
+{
+	float dist = 0;
+	for (size_t i = 0; i < dim; ++i) {
+		dist += abs(p1[i] - p2[i]);
+	}
+	return dist;
+}
+
 // euclidean distance
 inline static float sqrcos(const float* p1, const float* p2, size_t dim)
 {
@@ -205,8 +216,7 @@ private:
     float radiiA[2],
     float alphasB[2],
     float radiiB[2],
-    RNG& rng,
-	std::vector<float> probabs);
+    RNG& rng);
   /* this serves for classification into small clusters */
   void mapPointsToKohos(size_t n,
     size_t k,

@@ -242,8 +242,7 @@ std::vector<Position_Mapping> CEmbedSom::GetImageEmbeddings(const std::vector<si
 			radiiA,
 			alphasB,
 			radiiB,
-			rng,
-			distribution));
+			rng));
 
 	log("mapping...");
 	std::vector<std::pair<size_t, float>> mapping;
@@ -384,19 +383,18 @@ std::vector<std::pair<Position_Mapping, size_t>> CEmbedSom::GetCollectionReprese
 	log("computing SOM...");
 
 	timed("som",
-		som(n,
-			kohos,
-			dims,
-			rlen,
-			points,
-			koho,
-			nhbrdist,
-			alphasA,
-			radiiA,
-			alphasB,
-			radiiB,
-			rng,
-			distribution));
+	som(n,
+		kohos,
+		dims,
+		rlen,
+		points,
+		koho,
+		nhbrdist,
+		alphasA,
+		radiiA,
+		alphasB,
+		radiiB,
+		rng););
 
 	std::vector<size_t> repres;
 	std::vector<float> pointRepres;
@@ -741,10 +739,9 @@ void CEmbedSom::som(size_t n,
 	float radiiA[2],
 	float alphasB[2],
 	float radiiB[2],
-	RNG& rng,
-	std::vector<float> distribution)
+	RNG& rng)
 {
-	//std::uniform_int_distribution<size_t> random(0, n - 1);
+	std::uniform_int_distribution<size_t> random(0, n - 1);
 
 	size_t niter = rlen * n;
 
@@ -755,17 +752,16 @@ void CEmbedSom::som(size_t n,
 		alphaBDiff = alphasB[1] - alphasB[0];
 
 	for (size_t iter = 0; iter < niter; ++iter) {
-		//size_t point = random(rng);
-		size_t point = randomFromDistribution(rng, distribution, n);
-		float riter = iter / (float)niter;
+		size_t point = random(rng);
+		float riter = iter / float(niter);
 
 		size_t nearest = 0;
 		{
-			float nearestd = sqrcos(
+			float nearestd = manh(
 				points.data() + dim * point, koho.data(), dim);
 			for (size_t i = 1; i < k; ++i) {
 				float tmp =
-					sqrcos(points.data() + dim * point,
+					manh(points.data() + dim * point,
 						koho.data() + dim * i,
 						dim);
 				if (tmp < nearestd) {
@@ -780,14 +776,14 @@ void CEmbedSom::som(size_t n,
 			alphaA = alphaA0 + riter * alphaADiff,
 			alphaB = alphaB0 + riter * alphaBDiff;
 
-
 		for (size_t i = 0; i < k; ++i) {
 			float d = nhbrdist[i + k * nearest];
 
 			float alpha;
 
 			if (d > thresholdA) {
-				if (d > thresholdB) continue;
+				if (d > thresholdB)
+					continue;
 				alpha = alphaB;
 			}
 			else
