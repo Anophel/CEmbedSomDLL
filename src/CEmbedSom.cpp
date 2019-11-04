@@ -404,9 +404,9 @@ std::vector<std::pair<Position_Mapping, size_t>> CEmbedSom::GetCollectionReprese
 	for (size_t i = 0; i < kohos; ++i) {
 		size_t nearest = 0;
 		float nearestd =
-			sqrcos(points.data(), koho.data(), dims);
+			manh(points.data(), koho.data(), dims);
 		for (size_t point = 0; point < n; ++point) {
-			float tmp = sqrcos(points.data() + dims * point,
+			float tmp = manh(points.data() + dims * point,
 				koho.data() + dims * i,
 				dims);
 			if (tmp < nearestd && (std::find(repres.begin(), repres.end(), point) == repres.end())) {
@@ -509,7 +509,7 @@ void CEmbedSom::embedsom(
 		// heap-knn
 		for (i = 0; i < topn; ++i) {
 			dists[i].dist =
-				sqrcos(point, koho.data() + i * dim, dim);
+				manh(point, koho.data() + i * dim, dim);
 			dists[i].id = i;
 		}
 
@@ -517,7 +517,7 @@ void CEmbedSom::embedsom(
 			heap_down(dists.data(), topn - i - 1, topn);
 
 		for (i = topn; i < ncodes; ++i) {
-			float s = sqrcos(point, koho.data() + i * dim, dim);
+			float s = manh(point, koho.data() + i * dim, dim);
 			if (dists[0].dist < s) continue;
 			dists[0].dist = s;
 			dists[0].id = i;
@@ -808,9 +808,9 @@ void CEmbedSom::mapPointsToKohos(size_t n,
 	for (size_t point = 0; point < n; ++point) {
 		size_t nearest = 0;
 		float nearestd =
-			sqrcos(points.data() + dim * point, koho.data(), dim);
+			manh(points.data() + dim * point, koho.data(), dim);
 		for (size_t i = 1; i < k; ++i) {
-			float tmp = sqrcos(points.data() + dim * point,
+			float tmp = manh(points.data() + dim * point,
 				koho.data() + dim * i,
 				dim);
 			if (tmp < nearestd) {

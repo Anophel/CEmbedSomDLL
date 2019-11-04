@@ -4,6 +4,15 @@
 
 #include "CEmbedSom.h"
 
+#include <cassert>
+#include <cstdlib>
+#include <iterator>
+#include <algorithm>
+#include <random>
+#include <vector>
+
+using namespace std;
+
 struct Point {
 	float first;
 	float second;
@@ -21,6 +30,72 @@ struct PointWithId {
 
 const std::string path{ R"ddd(C:\Users\User\source\repos\VideoBrowser\CEmbedSomDLL\data\images-ordered-pca.bin)ddd" };
 CEmbedSom* ces;
+
+// ugly AF
+#define FRAND (rand() / (float)RAND_MAX)
+
+vector<size_t>
+sample_w(const vector<float>& ws, size_t k)
+{
+	size_t n = ws.size();
+
+	assert(n >= 2);
+	assert(k < n);
+
+	size_t branches = n - 1;
+	vector<float> tree(branches + n, 0);
+	float sum = 0;
+	for (size_t i = 0; i < n; ++i)
+		sum += tree[branches + i] = ws[i];
+
+	auto upd = [&tree, branches, n](size_t i) {
+		const size_t l = 2 * i + 1;
+		const size_t r = 2 * i + 2;
+		if (i < branches + n)
+			tree[i] = ((l < branches + n) ? tree[l] : 0) +
+			((r < branches + n) ? tree[r] : 0);
+	};
+
+	auto updb = [&tree, branches, n, upd](size_t i) {
+		for (;;) {
+			upd(i);
+			if (i)
+				i = (i - 1) / 2;
+			else
+				break;
+		}
+	};
+
+	for (size_t i = branches; i > 0; --i)
+		upd(i - 1);
+
+	vector<size_t> res(k, 0);
+
+	for (auto& rei : res) {
+		float x = FRAND * tree[0];
+		size_t i = 0;
+		for (;;) {
+			const size_t l = 2 * i + 1;
+			const size_t r = 2 * i + 2;
+
+			//cout << "at i " << i << " x: " << x << " in tree: " << tree[i] << endl;
+
+			if (i >= branches) break;
+			if (r < branches + n && x >= tree[l]) {
+				x -= tree[l];
+				i = r;
+			}
+			else
+				i = l;
+		}
+
+		tree[i] = 0;
+		updb(i);
+		rei = i - branches;
+	}
+
+	return res;
+}
 
 int main()
 {
@@ -121,6 +196,19 @@ extern "C" __declspec(dllexport) Point* getSOM (size_t* list, int size, float* p
 		++i;
 	}
 	return res;
+}
+
+extern "C" __declspec(dllexport) size_t* randomWeightedSample(float* list, size_t size, size_t count) {
+	std::vector<float> weigths(list, list + size);
+	std::cerr << "Test count: " << count << "; size: " << size << std::endl;
+	auto res = sample_w(weigths, count);
+	size_t* sample = new size_t[count];
+	size_t i = 0;
+	for (auto&& r : res)
+	{
+		sample[i++] = r;
+	}
+	return sample;
 }
 
 extern "C" __declspec(dllexport) PointWithId* getSOMRepresentants(size_t* list, int* size, float* probabilities, CEmbedSom* cesLoc, size_t xdim, size_t ydim, size_t rlen) {
