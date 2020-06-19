@@ -71,6 +71,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.dll</TargetExt>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -97,6 +98,10 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <DebugInformationFormat>None</DebugInformationFormat>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)CEmbedSomDLL\external\win64\igraph-0.7.1\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -132,7 +137,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Downloads\EmbedSOM.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\CEmbedSom.cpp" />
   </ItemGroup>
@@ -143,7 +147,6 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\Downloads\EmbedSOM.h" />
     <ClInclude Include="src\CEmbedSom.h" />
     <ClInclude Include="src\kamada-kawaii.hpp" />
   </ItemGroup>

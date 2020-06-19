@@ -21,9 +21,6 @@
     <ClCompile Include="src\CEmbedSom.cpp">
       <Filter>Zdrojové soubory</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\Downloads\EmbedSOM.cpp">
-      <Filter>Zdrojové soubory</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />
@@ -36,9 +33,6 @@
       <Filter>Hlavičkové soubory</Filter>
     </ClInclude>
     <ClInclude Include="src\CEmbedSom.h">
-      <Filter>Hlavičkové soubory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\Downloads\EmbedSOM.h">
       <Filter>Hlavičkové soubory</Filter>
     </ClInclude>
   </ItemGroup>

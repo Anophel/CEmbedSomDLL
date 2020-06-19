@@ -11,31 +11,23 @@
 #include <random>
 #include <vector>
 
+
 using namespace std;
 
 struct Point {
-	float first;
-	float second;
-	int clustId;
-	//float distCent;
+	double first;
+	double second;
+	size_t clustId;
 };
 
-struct PointWithId {
-	float first;
-	float second;
-	int clustId;
-	//float distCent;
-	int imageId;
-};
-
-const std::string path{ R"ddd(C:\Users\User\source\repos\VideoBrowser\CEmbedSomDLL\data\images-ordered-pca.bin)ddd" };
 CEmbedSom* ces;
 
+
 // ugly AF
-#define FRAND (rand() / (float)RAND_MAX)
+#define FRAND (rand() / (double)RAND_MAX)
 
 vector<size_t>
-sample_w(const vector<float>& ws, size_t k)
+sample_w(const vector<double>& ws, size_t k)
 {
 	size_t n = ws.size();
 
@@ -43,8 +35,8 @@ sample_w(const vector<float>& ws, size_t k)
 	assert(k < n);
 
 	size_t branches = n - 1;
-	vector<float> tree(branches + n, 0);
-	float sum = 0;
+	vector<double> tree(branches + n, 0);
+	double sum = 0;
 	for (size_t i = 0; i < n; ++i)
 		sum += tree[branches + i] = ws[i];
 
@@ -72,7 +64,7 @@ sample_w(const vector<float>& ws, size_t k)
 	vector<size_t> res(k, 0);
 
 	for (auto& rei : res) {
-		float x = FRAND * tree[0];
+		double x = FRAND * tree[0];
 		size_t i = 0;
 		for (;;) {
 			const size_t l = 2 * i + 1;
@@ -97,91 +89,26 @@ sample_w(const vector<float>& ws, size_t k)
 	return res;
 }
 
-int main()
-{
-  //const std::string path{ R"ddd(C:\Users\User\source\repos\VideoBrowser\CEmbedSomDLL\data\images-ordered-pca.bin)ddd" };
-
-  //CEmbedSom ces{ path };
-  ces = new CEmbedSom(path, 20000);
-  std::vector<size_t> input;
-
-  for (size_t i{ 0ULL }; i < 20000; ++i)
-  {
-    input.push_back(i);
-  }
-  std::vector<float> probabs;
-  probabs.push_back(1.0 / 20000.0);
-  for (size_t i{ 1ULL }; i < 20000; ++i)
-  {
-	  probabs.push_back(probabs[i - 1] + 1.0 / 20000.0);
-  }
-
-  std::cout << "Before GetImageEmbeddings" << endl;
-  auto result{ ces->GetCollectionRepresentants(input, probabs, 8, 8, 90) };
-  std::cout << "After GetImageEmbeddings" << endl;
-
-  const int resSize = 256;
-  PointWithId* res = new PointWithId[resSize];
-
-  int ix = 0;
-  for (auto&& r : result)
-  {
-	  res[ix].first = r.first.coords.first;
-	  res[ix].second = r.first.coords.second;
-	  res[ix].clustId = r.first.clust_id;
-	  res[ix].imageId = r.second;
-	  ++ix;
-  }
-
-  int i = 0;
-  for (auto&& r : result)
-  {
-    std::cout << res[i].first << ", " << res[i].second << '\t' << res[i].clustId << '\t' << res[i].imageId << std::endl;
-	++i;
-  }
-
-  int tmp;
-  std::cin >> tmp;
-
-  return 0;
-}
-
-extern "C" __declspec(dllexport) int testSOM() {
-	return main();
-}
-
-extern "C" __declspec(dllexport) CEmbedSom * initSOM(char* path, size_t datasetSize) {
-	ces = new CEmbedSom(path, datasetSize);
+extern "C" __declspec(dllexport) CEmbedSom * initSOM(double* data, size_t datasetSize, size_t dims) {
+	ces = new CEmbedSom(data, datasetSize, dims);
 	return ces;
 }
 
-extern "C" __declspec(dllexport) Point* getSOM (size_t* list, int size, float* probabilities, CEmbedSom* cesLoc) {
-	std::vector<size_t> input;
-	std::vector<float> probabs;
+extern "C" __declspec(dllexport) Point* getSOM (size_t* list, int size, double* probabilities, CEmbedSom* cesLoc) {
+	std::vector<size_t> input(list, list + size);
+	std::vector<double> probabs;
 
-	for (size_t i{ 0ULL }; i < size; ++i)
+	double uniformProbab = 1.0 / (double)size;
+	probabs.push_back(uniformProbab);
+	for (size_t i{ 1ULL }; i < size; ++i)
 	{
-		input.push_back(list[i]);
+		probabs.push_back(probabs[i - 1] + uniformProbab);
 	}
 
-	//if (probabilities == NULL) {
-		float uniformProbab = 1.0 / (float)size;
-		probabs.push_back(uniformProbab);
-		for (size_t i{ 1ULL }; i < size; ++i)
-		{
-			probabs.push_back(probabs[i - 1] + uniformProbab);
-		}
-	/*}
-	else {
-		probabs.push_back(probabilities[0]);
-		for (size_t i{ 1ULL }; i < size; ++i)
-		{
-			probabs.push_back(probabs[i - 1] + probabilities[i]);
-		}
-	}*/
+	log("Not implemented!!!");
 
+#if 0
 	auto result{ cesLoc->GetImageEmbeddings(input, probabs) };
-
 	const int resSize = size;
 	Point* res = new Point[resSize];
 
@@ -191,16 +118,16 @@ extern "C" __declspec(dllexport) Point* getSOM (size_t* list, int size, float* p
 		res[i].first = r.coords.first;
 		res[i].second = r.coords.second;
 		res[i].clustId = r.clust_id;
-		//res[i].distCent = r.first.dist_cent;
-		//res[i].imageId = list[i];
 		++i;
 	}
 	return res;
+
+#endif
+	return NULL;
 }
 
-extern "C" __declspec(dllexport) size_t* randomWeightedSample(float* list, size_t size, size_t count) {
-	std::vector<float> weigths(list, list + size);
-	std::cerr << "Test count: " << count << "; size: " << size << std::endl;
+extern "C" __declspec(dllexport) size_t* randomWeightedSample(double* list, size_t size, size_t count) {
+	std::vector<double> weigths(list, list + size);
 	auto res = sample_w(weigths, count);
 	size_t* sample = new size_t[count];
 	size_t i = 0;
@@ -211,34 +138,74 @@ extern "C" __declspec(dllexport) size_t* randomWeightedSample(float* list, size_
 	return sample;
 }
 
-extern "C" __declspec(dllexport) PointWithId* getSOMRepresentants(size_t* list, int* size, float* probabilities, CEmbedSom* cesLoc, size_t xdim, size_t ydim, size_t rlen) {
-	std::vector<size_t> input;
-	std::vector<float> probabs;
+extern "C" __declspec(dllexport) PointWithId* getSOMRepresentants(
+	size_t* list,
+	int* size,
+	double* probabilities,
+	CEmbedSom* cesLoc,
+	bool useCos,
+	bool forceRepre,
+	bool mostProbab,
+	size_t xdim,
+	size_t ydim,
+	size_t rlen) 
+{
+	std::vector<size_t> input(list, list + *size);
+	std::vector<double> probabs(probabilities, probabilities + *size);
 
-	for (size_t i{ 0ULL }; i < *size; ++i)
+	vector<PointWithId> result;
+	if (useCos)
 	{
-		input.push_back(list[i]);
+		result = cesLoc->GetCollectionRepresentantsCos(input, probabs, forceRepre, mostProbab, xdim, ydim, rlen);
 	}
-	for (size_t i{ 0ULL }; i < *size; ++i)
+	else
 	{
-		probabs.push_back(probabilities[i]);
+		result = cesLoc->GetCollectionRepresentantsManh(input, probabs, forceRepre, mostProbab, xdim, ydim, rlen);
 	}
 
-	auto result{ cesLoc->GetCollectionRepresentants(input, probabs, xdim, ydim, rlen) };
-
-	const int resSize = xdim * ydim;
+	const size_t resSize = xdim * ydim;
 	*size = resSize;
 	PointWithId* res = new PointWithId[resSize];
-
-	int i = 0;
+	size_t i = 0;
 	for (auto&& r : result)
 	{
-		res[i].first = r.first.coords.first;
-		res[i].second = r.first.coords.second;
-		res[i].clustId = r.first.clust_id;
-		//res[i].distCent = r.first.dist_cent;
-		res[i].imageId = r.second;
-		++i;
+		res[i++] = r;
 	}
 	return res;
+}
+
+
+extern "C" __declspec(dllexport) void deletePointWithIdArray(PointWithId* toDel) {
+	delete[] toDel;
+}
+
+extern "C" __declspec(dllexport) void deletePointArray(Point* toDel) {
+	delete[] toDel;
+}
+
+
+extern "C" __declspec(dllexport) double* testFunc(double* list, size_t size)
+{
+	for (size_t i = 0; i < size; ++i) 
+	{
+		list[i] = list[i] * 2;
+	}
+	return list;
+}
+
+
+extern "C" __declspec(dllexport) double* testFunc2(double* list, size_t size)
+{
+	std::cout << "Hello from testFunc2" << std::endl;
+	double* res = new double[size];
+	for (size_t i = 0; i < size; ++i)
+	{
+		res[i] = list[i] * 2;
+	}
+	return res;
+}
+
+
+extern "C" __declspec(dllexport) void deleteTest(double* toDel) {
+	delete[] toDel;
 }
